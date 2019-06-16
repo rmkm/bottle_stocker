@@ -1,4 +1,5 @@
 from bottle import route, run, auth_basic, get, post, request
+import math
 
 USERNAME = "amazon"
 PASSWORD = "candidate"
@@ -41,9 +42,8 @@ def checkstock(name):
             return "ERROR\n"
 
 def sell(name, amount, price):
-    if (None in [name, price] 
-        or name not in stock 
-        or price<=0 ):
+    if (None in [name] 
+        or name not in stock ):
         return "ERROR\n"
 
     if amount is None:
@@ -55,17 +55,17 @@ def sell(name, amount, price):
 
     global sales
 
-    if amount is None and stock[name] > 0:
-        stock[name] -= 1
-        sales += price
-    elif stock[name] >= amount:
+    if stock[name] >= amount:
         stock[name] -= amount
-        sales += price * amount
+        if price is not None and price >= 0:
+            sales += price * amount
     else:
         return "ERROR\n"
 
 def checksales():
-    return "sales: {}\n".format(sales)
+    if sales.is_integer():
+        return "sales: {}\n".format(int(sales))
+    return "sales: {}\n".format(math.ceil(sales*100)/100)
 
 def deleteall():
     global stock
@@ -77,7 +77,7 @@ def deleteall():
 def say_AMAZON():
     return "AMAZON\n"
 
-@route('/secret')
+@route('/secret/')
 @auth_basic(checkauth)
 def say_SUCCESS():
     return "SUCCESS\n"
@@ -85,6 +85,9 @@ def say_SUCCESS():
 @route('/calc')
 def calculation():
     formula = request.query.get('input', type = str)
+    """ Replace whitespace with '+', since
+    '+' is treated as whitespace in URL 
+    """
     formula = formula.replace(' ', '+')
     for char in formula:
         if not char in calc_symbol_list:
